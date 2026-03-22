@@ -63,6 +63,24 @@ config.OnAdd()
       .Do(() => Console.WriteLine("Performance Warning: Huge key added."));
 ```
 
+### 3. Spy on a HashSet
+
+Replace `new HashSet<T>()` with `new TrapHashSet<T>()`.
+
+```csharp
+var uniqueTags = new TrapHashSet<string>();
+
+// Detect inefficient code: adding a tag that already exists
+uniqueTags.OnAdd()
+          .When(tag => uniqueTags.Contains(tag))
+          .Do(TrapActions.Log("Inefficient Code: Tag already exists!"));
+
+// Break when a critical permission is removed
+uniqueTags.OnRemove()
+          .When(tag => tag == "SUPER_ADMIN")
+          .Do(TrapActions.Break());
+```
+
 ## 🛡️ Performance & Production Safety
 
 **CollectionSpy** is designed to be safe.

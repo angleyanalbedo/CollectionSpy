@@ -87,8 +87,20 @@ namespace Debugging.Traps.Demo
 
             iDict["ApiUrl"] = "https://api.com"; // Add operation, normal
             
-            Console.WriteLine("\n--- Trigger Dictionary Update Trap ---");
-            iDict["ApiUrl"] = "http://insecure.com"; // Update operation, triggers Log
+            Console.WriteLine("\n=============================");
+            Console.WriteLine("=== TrapHashSet Demo ===");
+
+            var activeTags = new TrapHashSet<string>();
+
+            // Config: Detect duplicate add attempts
+            // Note: HashSet naturally handles duplicates, but we might want to know WHO is adding them unnecessarily
+            activeTags.OnAdd()
+                      .When(tag => activeTags.Contains(tag))
+                      .Do(TrapActions.Log("Inefficient Code: Tag already exists!"));
+
+            activeTags.Add("urgent");
+            Console.WriteLine("Adding 'urgent' again...");
+            activeTags.Add("urgent"); // Triggers Log
         }
     }
 }
