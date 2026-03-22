@@ -101,6 +101,8 @@ namespace Debugging.Traps
 
         private void ExecuteTraps(TrapEventType eventType, TKey key, TValue value, TValue? oldValue = default!)
         {
+            if (!TrapManager.Enabled || _rules.Count == 0) return;
+
             List<DictTrapRule<TKey, TValue>> activeRules;
             lock (_trapLock)
             {

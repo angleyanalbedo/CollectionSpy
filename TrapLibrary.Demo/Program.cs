@@ -17,6 +17,10 @@ namespace Debugging.Traps.Demo
     {
         static void Main(string[] args)
         {
+            // 0. Global Configuration (Default: Enabled in DEBUG, Disabled in RELEASE)
+            // TrapManager.Enabled = true; // Force enable in production if needed
+
+            Console.WriteLine($"[TrapManager] Status: {(TrapManager.Enabled ? "Enabled" : "Disabled")}");
             Console.WriteLine("=== TrapList Demo ===");
 
             // 1. Create monitored List

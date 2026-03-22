@@ -59,6 +59,8 @@ namespace Debugging.Traps
 
         private void ExecuteTraps(TrapEventType eventType, T item, T? oldItem = default)
         {
+            if (!TrapManager.Enabled || _rules.Count == 0) return;
+
             List<ListTrapRule<T>> activeRules;
             lock (_trapLock)
             {
