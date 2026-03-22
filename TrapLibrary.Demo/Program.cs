@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Debugging.Traps;
+using Debugging.Traps.Extensions; // Import Extensions
 
 namespace Debugging.Traps.Demo
 {
@@ -21,10 +22,12 @@ namespace Debugging.Traps.Demo
             // TrapManager.Enabled = true; // Force enable in production if needed
 
             Console.WriteLine($"[TrapManager] Status: {(TrapManager.Enabled ? "Enabled" : "Disabled")}");
+            
             Console.WriteLine("=== TrapList Demo ===");
 
-            // 1. Create monitored List
-            var userList = new TrapList<User>();
+            // 1. Create monitored List using Extension Method!
+            var initialUsers = new List<User> { new User { Id = 0, Name = "Root" } };
+            var userList = initialUsers.ToTrapList(); // <--- Clean syntax
 
             // 2. Configure Traps (Fluent API)
             
