@@ -26,7 +26,8 @@ namespace Debugging.Traps
             }
             catch
             {
-                // Ignore console errors (e.g. headless environments)
+                // Fallback for headless environments (e.g. no console attached)
+                System.Diagnostics.Debug.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are ACTIVE in Release mode.");
             }
 #endif
         }

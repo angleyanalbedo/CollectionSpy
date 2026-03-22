@@ -121,7 +121,7 @@ namespace Debugging.Traps
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[TrapDictionary Error] {ex.Message}");
+                    try { Console.Error.WriteLine($"[CollectionSpy Error] Trap failed: {ex}"); } catch {}
                 }
             }
         }

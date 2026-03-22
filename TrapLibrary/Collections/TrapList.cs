@@ -80,8 +80,7 @@ namespace Debugging.Traps
                 }
                 catch (Exception ex)
                 {
-                    // Suppress exceptions to prevent debug code from crashing main application
-                    Console.WriteLine($"[TrapList Error] Trap execution failed: {ex.Message}");
+                    try { Console.Error.WriteLine($"[CollectionSpy Error] Trap failed: {ex}"); } catch {}
                 }
             }
         }

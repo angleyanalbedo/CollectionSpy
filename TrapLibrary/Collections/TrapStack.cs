@@ -95,7 +95,10 @@ namespace Debugging.Traps
                         rule.Action?.Invoke();
                     }
                 }
-                catch { /* Ignore */ }
+                catch (Exception ex)
+                {
+                    try { Console.Error.WriteLine($"[CollectionSpy Error] Trap failed: {ex}"); } catch {}
+                }
             }
         }
     }
