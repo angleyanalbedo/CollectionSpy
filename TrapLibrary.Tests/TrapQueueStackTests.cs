@@ -36,7 +36,7 @@ namespace Debugging.Traps.Tests
         public void Stack_Push_Pop_Should_Trap()
         {
             var stack = new TrapStack<string>();
-            string popped = null;
+            string? popped = null;
 
             stack.OnPop().When(x => x == "B").Do(() => popped = "B");
 

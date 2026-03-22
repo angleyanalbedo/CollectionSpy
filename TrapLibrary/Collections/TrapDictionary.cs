@@ -90,7 +90,12 @@ namespace Debugging.Traps
         public int Count => _inner.Count;
         public bool IsReadOnly => false;
         public bool ContainsKey(TKey key) => _inner.ContainsKey(key);
-        public bool TryGetValue(TKey key, out TValue value) => _inner.TryGetValue(key, out value);
+        public bool TryGetValue(TKey key, out TValue value) 
+        {
+#pragma warning disable CS8601 // Possible null reference assignment.
+            return _inner.TryGetValue(key, out value);
+#pragma warning restore CS8601
+        }
         public bool Contains(KeyValuePair<TKey, TValue> item) => ((ICollection<KeyValuePair<TKey, TValue>>)_inner).Contains(item);
         public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) => ((ICollection<KeyValuePair<TKey, TValue>>)_inner).CopyTo(array, arrayIndex);
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => _inner.GetEnumerator();
