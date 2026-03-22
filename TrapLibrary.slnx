@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/TrapLibrary.Demo/">
+    <Project Path="TrapLibrary.Demo/Debugging.Traps.Demo.csproj" />
+  </Folder>
+  <Folder Name="/TrapLibrary/">
+    <Project Path="TrapLibrary/Debugging.Traps.csproj" />
+  </Folder>
+</Solution>
