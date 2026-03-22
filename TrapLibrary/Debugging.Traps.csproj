@@ -1,9 +1,27 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Use netstandard2.0 for maximum compatibility (supports .NET Core, .NET Framework, Xamarin) -->
+    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <LangVersion>10.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- NuGet Metadata -->
+    <PackageId>CollectionSpy</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>angleyanalbedo</Authors>
+    <Company>angleyanalbedo</Company>
+    <Description>A lightweight C# library for debugging collections (List, Dictionary) with fluent "Trap" API. Catch unwanted modifications, log stack traces, and debug complex state issues easily.</Description>
+    <PackageTags>debugging collection list dictionary trap spy observable hook interceptor</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/angleyanalbedo/CollectionSpy.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    
+    <!-- Build Options -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
 </Project>
