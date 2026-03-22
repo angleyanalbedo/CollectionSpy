@@ -79,6 +79,25 @@ uniqueTags.OnAdd()
 uniqueTags.OnRemove()
           .When(tag => tag == "SUPER_ADMIN")
           .Do(TrapActions.Break());
+
+### 4. Spy on Queue and Stack
+
+```csharp
+var jobQueue = new TrapQueue<string>();
+
+// Debug who added a "Poison Pill" message
+jobQueue.OnEnqueue()
+        .When(msg => msg == "POISON_PILL")
+        .Do(TrapActions.Break());
+
+// ---
+
+var navStack = new TrapStack<string>();
+
+// Log when the root page is popped
+navStack.OnPop()
+        .When(page => page == "RootPage")
+        .Do(TrapActions.DumpStackTrace("Root Popped By"));
 ```
 
 ## 🛡️ Performance & Production Safety

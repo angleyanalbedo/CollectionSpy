@@ -101,6 +101,36 @@ namespace Debugging.Traps.Demo
             activeTags.Add("urgent");
             Console.WriteLine("Adding 'urgent' again...");
             activeTags.Add("urgent"); // Triggers Log
+
+            
+            Console.WriteLine("\n=============================");
+            Console.WriteLine("=== TrapQueue Demo ===");
+
+            var jobQueue = new TrapQueue<string>();
+            
+            // Monitor who is adding "POISON_PILL"
+            jobQueue.OnEnqueue()
+                    .When(msg => msg == "POISON_PILL")
+                    .Do(TrapActions.Log("Critical: Poison pill enqueued!"));
+
+            jobQueue.Enqueue("job_1");
+            jobQueue.Enqueue("POISON_PILL"); // Triggers Log
+
+            
+            Console.WriteLine("\n=============================");
+            Console.WriteLine("=== TrapStack Demo ===");
+            
+            var navStack = new TrapStack<string>();
+
+            // Monitor stack underflow risk (or just debug state)
+            navStack.OnPop()
+                    .When(page => page == "Home")
+                    .Do(() => Console.WriteLine("Navigating back from Home (Root)..."));
+
+            navStack.Push("Home");
+            navStack.Push("Settings");
+            navStack.Pop(); // Settings
+            navStack.Pop(); // Home -> Triggers console write
         }
     }
 }

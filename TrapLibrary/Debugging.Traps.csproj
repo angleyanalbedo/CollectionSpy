@@ -11,7 +11,7 @@
     <!-- NuGet Metadata -->
     <PackageId>CollectionSpy</PackageId>
     <Title>CollectionSpy</Title>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <Authors>angleyanalbedo</Authors>
     <Company>angleyanalbedo</Company>
     <Description>A lightweight C# library for debugging collections (List, Dictionary) with fluent "Trap" API. Catch unwanted modifications, log stack traces, and debug complex state issues easily.</Description>
