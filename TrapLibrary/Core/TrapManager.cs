@@ -9,16 +9,25 @@ namespace Debugging.Traps
     {
         /// <summary>
         /// Global switch to enable or disable all traps.
-        /// Default is true in DEBUG builds, false in RELEASE builds.
+        /// Default is TRUE for all builds (Debug & Release).
         /// </summary>
-        public static bool Enabled { get; set; }
+        public static bool Enabled { get; set; } = true;
 
         static TrapManager()
         {
-#if DEBUG
-            Enabled = true;
-#else
-            Enabled = false;
+#if !DEBUG
+            // In RELEASE builds, warn the user that performance might be impacted.
+            try
+            {
+                var originalColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are ACTIVE in Release mode. Set TrapManager.Enabled=false to optimize performance.");
+                Console.ForegroundColor = originalColor;
+            }
+            catch
+            {
+                // Ignore console errors (e.g. headless environments)
+            }
 #endif
         }
     }

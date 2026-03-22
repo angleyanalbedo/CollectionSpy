@@ -84,19 +84,18 @@ navStack.OnPop()
 
 ## 🛡️ Performance & Production Safety
 
-**CollectionSpy** is designed to be safe.
+**CollectionSpy** is designed to be usable in production for critical debugging, but with clear warnings.
 
-1.  **Zero-Overhead in Release (Default)**: 
-    The library includes a global switch `TrapManager.Enabled`.
-    - **DEBUG builds**: Enabled by default.
-    - **RELEASE builds**: **Disabled** by default. When disabled, the interception logic returns immediately (fast-fail), imposing negligible performance overhead.
+1.  **Release Mode**:
+    - By default, `TrapManager.Enabled` is **TRUE** in both Debug and Release builds.
+    - In **Release** builds, the library will emit a **Console Warning** on startup to alert you that traps are active.
 
-2.  **Global Toggle**:
-    You can manually control it in your startup logic:
+2.  **Disabling**:
+    To disable all overhead in production, set:
     ```csharp
-    // Force enable in production for emergency diagnostics
-    TrapManager.Enabled = true; 
+    TrapManager.Enabled = false;
     ```
+    When disabled, the interception logic returns immediately (fast-fail), imposing negligible overhead.
 
 3.  **Thread Safety**: 
     Trap configuration is thread-safe. Execution logic snapshots rules to prevent concurrency issues during enumeration.
