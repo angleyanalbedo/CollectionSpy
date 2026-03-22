@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <!-- Use netstandard2.0 for maximum compatibility (supports .NET Core, .NET Framework, Xamarin) -->
-    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <!-- Added net45 specifically for legacy .NET Framework 4.5 projects -->
+    <TargetFrameworks>netstandard2.0;net45;net6.0;net8.0</TargetFrameworks>
     <LangVersion>10.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
     <!-- NuGet Metadata -->
     <PackageId>CollectionSpy</PackageId>
+    <Title>CollectionSpy</Title>
     <Version>0.0.1</Version>
     <Authors>angleyanalbedo</Authors>
     <Company>angleyanalbedo</Company>
@@ -22,6 +24,16 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageProjectUrl>https://github.com/angleyanalbedo/CollectionSpy.git</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Copyright>../LICENSE</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>
