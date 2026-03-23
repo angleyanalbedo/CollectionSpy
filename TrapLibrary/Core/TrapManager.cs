@@ -7,27 +7,50 @@ namespace Debugging.Traps
     /// </summary>
     public static class TrapManager
     {
+        private static bool _enabled = true;
+
         /// <summary>
         /// Global switch to enable or disable all traps.
         /// Default is TRUE for all builds (Debug & Release).
         /// </summary>
-        public static bool Enabled { get; set; } = true;
+        public static bool Enabled
+        {
+            get => _enabled;
+            set
+            {
+                _enabled = value;
+            }
+        }
 
         static TrapManager()
         {
+            ShowPerformanceHint();
+        }
+
+        private static void ShowPerformanceHint()
+        {
 #if !DEBUG
-            // In RELEASE builds, warn the user that performance might be impacted.
             try
             {
                 var originalColor = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are ACTIVE in Release mode. Set TrapManager.Enabled=false to optimize performance.");
+                if (_enabled)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance.");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("[CollectionSpy] ℹ️ Traps are disabled for best performance.");
+                }
                 Console.ForegroundColor = originalColor;
             }
             catch
             {
                 // Fallback for headless environments (e.g. no console attached)
-                System.Diagnostics.Debug.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are ACTIVE in Release mode.");
+                System.Diagnostics.Debug.WriteLine(_enabled 
+                    ? "[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance." 
+                    : "[CollectionSpy] ℹ️ Traps are disabled for best performance.");
             }
 #endif
         }
