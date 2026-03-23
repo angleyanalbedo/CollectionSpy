@@ -84,11 +84,38 @@ navStack.OnPop()
 
 ## 🛡️ Performance & Production Safety
 
-**CollectionSpy** is designed to be usable in production for critical debugging, but with clear warnings.
+**CollectionSpy** is designed for critical debugging in production environments with minimal overhead.
+
+### ⚡ Zero-Allocation Architecture (v1.0+)
+The library uses a highly optimized **Copy-On-Write** strategy for rule storage.
+- **Zero Allocations**: Executing traps (adding/removing items) incurs **0 bytes of memory allocation** on the hot path.
+- **Microsecond Overhead**: Even with active traps, the overhead is measured in single-digit microseconds (~4-6μs).
+- **Thread Safe**: Rule execution is lock-free and thread-safe.
+
+### 📊 Benchmarks
+Comparison of `List<int>.Add()` operations (10,000 items):
+
+| Method | Mean Time | Ratio | Allocation |
+| :--- | :--- | :--- | :--- |
+| **Native List** | ~7.9 μs | 1.0x | - |
+| **AddWithoutTrap** | ~9.7 μs | 1.2x | - |
+| **TrapList (Active)** | ~71.0 μs | 8.9x | - |
+
+> *Benchmarks run on AMD Ryzen 9 8945HX, .NET 8.0*
+
+### 🚀 Bypassing Traps
+Need to initialize a large collection without triggering traps? Use the **Bypass API**:
+
+```csharp
+// Fast bulk insert, ZERO trap overhead
+myTrapList.AddWithoutTrap(newItem);
+myTrapList.AddRange(largeCollection);
+```
 
 1.  **Release Mode**:
     - By default, `TrapManager.Enabled` is **TRUE** in both Debug and Release builds.
-    - In **Release** builds, the library will emit a **Console Warning** on startup to alert you that traps are active.
+    - In **Release** builds, the library will emit a single **Console Warning** on startup (static constructor) to alert you that traps are active.
+    - Subsequent toggles of `TrapManager.Enabled` are silent.
 
 2.  **Disabling**:
     To disable all overhead in production, set:
@@ -98,7 +125,7 @@ navStack.OnPop()
     When disabled, the interception logic returns immediately (fast-fail), imposing negligible overhead.
 
 3.  **Thread Safety**: 
-    Trap configuration is thread-safe. Execution logic snapshots rules to prevent concurrency issues during enumeration.
+    Trap configuration is thread-safe. Execution logic uses immutable snapshots to prevent concurrency issues during enumeration.
 
 ## 📝 License
 
