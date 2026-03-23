@@ -9,18 +9,50 @@ namespace Debugging.Traps
     {
         private readonly Stack<T> _inner;
         private readonly object _trapLock = new object();
-        private readonly List<StackTrapRule<T>> _rules = new List<StackTrapRule<T>>();
+        private readonly Dictionary<TrapEventType, StackTrapRule<T>[]> _ruleBuckets;
 
-        public TrapStack() { _inner = new Stack<T>(); }
-        public TrapStack(IEnumerable<T> collection) { _inner = new Stack<T>(collection); }
-        public TrapStack(int capacity) { _inner = new Stack<T>(capacity); }
+        public TrapStack() 
+        { 
+            _inner = new Stack<T>(); 
+            _ruleBuckets = InitializeBuckets();
+        }
+        public TrapStack(IEnumerable<T> collection) 
+        { 
+            _inner = new Stack<T>(collection); 
+            _ruleBuckets = InitializeBuckets();
+        }
+        public TrapStack(int capacity) 
+        { 
+            _inner = new Stack<T>(capacity); 
+            _ruleBuckets = InitializeBuckets();
+        }
+
+        private Dictionary<TrapEventType, StackTrapRule<T>[]> InitializeBuckets()
+        {
+            var dict = new Dictionary<TrapEventType, StackTrapRule<T>[]>();
+            foreach (TrapEventType type in Enum.GetValues(typeof(TrapEventType)))
+            {
+                dict[type] = new StackTrapRule<T>[0];
+            }
+            return dict;
+        }
 
         // --- Fluent API ---
         public StackTrapBuilder<T> OnPush() => new StackTrapBuilder<T>(this, TrapEventType.Added);
         public StackTrapBuilder<T> OnPop() => new StackTrapBuilder<T>(this, TrapEventType.Removed);
         public StackTrapBuilder<T> OnClear() => new StackTrapBuilder<T>(this, TrapEventType.Cleared);
         
-        internal void AddRule(StackTrapRule<T> rule) { lock(_trapLock) _rules.Add(rule); }
+        internal void AddRule(StackTrapRule<T> rule) 
+        { 
+            lock(_trapLock) 
+            {
+                var existing = _ruleBuckets[rule.EventType];
+                var newArray = new StackTrapRule<T>[existing.Length + 1];
+                Array.Copy(existing, newArray, existing.Length);
+                newArray[existing.Length] = rule;
+                _ruleBuckets[rule.EventType] = newArray;
+            }
+        }
 
         // --- Core Methods ---
         public void Push(T item)
@@ -78,16 +110,14 @@ namespace Debugging.Traps
         // --- Execution ---
         private void ExecuteTraps(TrapEventType eventType, T item)
         {
-            if (!TrapManager.Enabled || _rules.Count == 0) return;
+            if (!TrapManager.Enabled) return;
 
-            List<StackTrapRule<T>> activeRules;
-            lock (_trapLock)
-            {
-                activeRules = _rules.Where(r => r.EventType == eventType).ToList();
-            }
+            var rules = _ruleBuckets[eventType];
+            if (rules.Length == 0) return;
 
-            foreach (var rule in activeRules)
+            for (int i = 0; i < rules.Length; i++)
             {
+                var rule = rules[i];
                 try
                 {
                     if (rule.Predicate == null || rule.Predicate(item))

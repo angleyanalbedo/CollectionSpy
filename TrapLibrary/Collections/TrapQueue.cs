@@ -9,18 +9,50 @@ namespace Debugging.Traps
     {
         private readonly Queue<T> _inner;
         private readonly object _trapLock = new object();
-        private readonly List<QueueTrapRule<T>> _rules = new List<QueueTrapRule<T>>();
+        private readonly Dictionary<TrapEventType, QueueTrapRule<T>[]> _ruleBuckets;
 
-        public TrapQueue() { _inner = new Queue<T>(); }
-        public TrapQueue(IEnumerable<T> collection) { _inner = new Queue<T>(collection); }
-        public TrapQueue(int capacity) { _inner = new Queue<T>(capacity); }
+        public TrapQueue() 
+        { 
+            _inner = new Queue<T>();
+            _ruleBuckets = InitializeBuckets();
+        }
+        public TrapQueue(IEnumerable<T> collection) 
+        { 
+            _inner = new Queue<T>(collection);
+            _ruleBuckets = InitializeBuckets();
+        }
+        public TrapQueue(int capacity) 
+        { 
+            _inner = new Queue<T>(capacity);
+            _ruleBuckets = InitializeBuckets();
+        }
+
+        private Dictionary<TrapEventType, QueueTrapRule<T>[]> InitializeBuckets()
+        {
+            var dict = new Dictionary<TrapEventType, QueueTrapRule<T>[]>();
+            foreach (TrapEventType type in Enum.GetValues(typeof(TrapEventType)))
+            {
+                dict[type] = new QueueTrapRule<T>[0];
+            }
+            return dict;
+        }
 
         // --- Fluent API ---
         public QueueTrapBuilder<T> OnEnqueue() => new QueueTrapBuilder<T>(this, TrapEventType.Added);
         public QueueTrapBuilder<T> OnDequeue() => new QueueTrapBuilder<T>(this, TrapEventType.Removed);
         public QueueTrapBuilder<T> OnClear() => new QueueTrapBuilder<T>(this, TrapEventType.Cleared);
         
-        internal void AddRule(QueueTrapRule<T> rule) { lock(_trapLock) _rules.Add(rule); }
+        internal void AddRule(QueueTrapRule<T> rule) 
+        { 
+            lock(_trapLock)
+            {
+                var existing = _ruleBuckets[rule.EventType];
+                var newArray = new QueueTrapRule<T>[existing.Length + 1];
+                Array.Copy(existing, newArray, existing.Length);
+                newArray[existing.Length] = rule;
+                _ruleBuckets[rule.EventType] = newArray;
+            }
+        }
 
         // --- Core Methods ---
         public void Enqueue(T item)
@@ -78,16 +110,14 @@ namespace Debugging.Traps
         // --- Execution ---
         private void ExecuteTraps(TrapEventType eventType, T item)
         {
-            if (!TrapManager.Enabled || _rules.Count == 0) return;
+            if (!TrapManager.Enabled) return;
 
-            List<QueueTrapRule<T>> activeRules;
-            lock (_trapLock)
-            {
-                activeRules = _rules.Where(r => r.EventType == eventType).ToList();
-            }
+            var rules = _ruleBuckets[eventType];
+            if (rules.Length == 0) return;
 
-            foreach (var rule in activeRules)
+            for (int i = 0; i < rules.Length; i++)
             {
+                var rule = rules[i];
                 try
                 {
                     if (rule.Predicate == null || rule.Predicate(item))

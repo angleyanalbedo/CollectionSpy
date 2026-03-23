@@ -9,11 +9,28 @@ namespace Debugging.Traps
     {
         // Thread lock to prevent conflicts when configuring or triggering Traps in multi-threaded environments
         private readonly object _trapLock = new object();
-        private readonly List<ListTrapRule<T>> _rules = new List<ListTrapRule<T>>();
+        // Optimized bucket storage: fast lookups, no allocations during execution
+        private readonly Dictionary<TrapEventType, ListTrapRule<T>[]> _ruleBuckets;
 
-        public TrapList() { }
+        private Dictionary<TrapEventType, ListTrapRule<T>[]> InitializeBuckets()
+        {
+            var dict = new Dictionary<TrapEventType, ListTrapRule<T>[]>();
+            foreach (TrapEventType type in Enum.GetValues(typeof(TrapEventType)))
+            {
+                dict[type] = new ListTrapRule<T>[0];
+            }
+            return dict;
+        }
+
+        public TrapList() 
+        {
+            _ruleBuckets = InitializeBuckets();
+        }
         
-        public TrapList(IEnumerable<T> collection) : base(collection.ToList()) { }
+        public TrapList(IEnumerable<T> collection) : base(collection.ToList()) 
+        {
+            _ruleBuckets = InitializeBuckets();
+        }
 
         // --- Fluent API Entry Points ---
 
@@ -26,7 +43,13 @@ namespace Debugging.Traps
         {
             lock (_trapLock)
             {
-                _rules.Add(rule);
+                // Copy-On-Write: Create new array, copy old, add new, replace reference
+                // This allows lock-free reads in ExecuteTraps
+                var existing = _ruleBuckets[rule.EventType];
+                var newArray = new ListTrapRule<T>[existing.Length + 1];
+                Array.Copy(existing, newArray, existing.Length);
+                newArray[existing.Length] = rule;
+                _ruleBuckets[rule.EventType] = newArray;
             }
         }
 
@@ -78,17 +101,15 @@ namespace Debugging.Traps
 
         private void ExecuteTraps(TrapEventType eventType, T item, T? oldItem = default)
         {
-            if (!TrapManager.Enabled || _rules.Count == 0) return;
+            if (!TrapManager.Enabled) return;
 
-            List<ListTrapRule<T>> activeRules;
-            lock (_trapLock)
-            {
-                // Snapshot to avoid modification during enumeration
-                activeRules = _rules.Where(r => r.EventType == eventType).ToList();
-            }
+            // Direct bucket access: O(1) lookup, no LINQ, no allocation, no lock needed for reading
+            var rules = _ruleBuckets[eventType];
+            if (rules.Length == 0) return;
 
-            foreach (var rule in activeRules)
+            for (int i = 0; i < rules.Length; i++)
             {
+                var rule = rules[i];
                 try
                 {
                     // Execute Action only if Predicate is satisfied

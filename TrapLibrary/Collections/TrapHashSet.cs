@@ -9,21 +9,34 @@ namespace Debugging.Traps
     {
         private readonly HashSet<T> _inner;
         private readonly object _trapLock = new object();
-        private readonly List<SetTrapRule<T>> _rules = new List<SetTrapRule<T>>();
+        private readonly Dictionary<TrapEventType, SetTrapRule<T>[]> _ruleBuckets;
 
         public TrapHashSet()
         {
             _inner = new HashSet<T>();
+            _ruleBuckets = InitializeBuckets();
         }
 
         public TrapHashSet(IEnumerable<T> collection)
         {
             _inner = new HashSet<T>(collection);
+            _ruleBuckets = InitializeBuckets();
         }
 
         public TrapHashSet(IEqualityComparer<T> comparer)
         {
             _inner = new HashSet<T>(comparer);
+            _ruleBuckets = InitializeBuckets();
+        }
+
+        private Dictionary<TrapEventType, SetTrapRule<T>[]> InitializeBuckets()
+        {
+            var dict = new Dictionary<TrapEventType, SetTrapRule<T>[]>();
+            foreach (TrapEventType type in Enum.GetValues(typeof(TrapEventType)))
+            {
+                dict[type] = new SetTrapRule<T>[0];
+            }
+            return dict;
         }
 
         // --- Fluent API Entry Points ---
@@ -35,7 +48,11 @@ namespace Debugging.Traps
         {
             lock (_trapLock)
             {
-                _rules.Add(rule);
+                var existing = _ruleBuckets[rule.EventType];
+                var newArray = new SetTrapRule<T>[existing.Length + 1];
+                Array.Copy(existing, newArray, existing.Length);
+                newArray[existing.Length] = rule;
+                _ruleBuckets[rule.EventType] = newArray;
             }
         }
 
@@ -153,16 +170,14 @@ namespace Debugging.Traps
 
         private void ExecuteTraps(TrapEventType eventType, T item)
         {
-            if (!TrapManager.Enabled || _rules.Count == 0) return;
+            if (!TrapManager.Enabled) return;
 
-            List<SetTrapRule<T>> activeRules;
-            lock (_trapLock)
-            {
-                activeRules = _rules.Where(r => r.EventType == eventType).ToList();
-            }
+            var rules = _ruleBuckets[eventType];
+            if (rules.Length == 0) return;
 
-            foreach (var rule in activeRules)
+            for (int i = 0; i < rules.Length; i++)
             {
+                var rule = rules[i];
                 try
                 {
                     if (rule.Predicate == null || rule.Predicate(item))

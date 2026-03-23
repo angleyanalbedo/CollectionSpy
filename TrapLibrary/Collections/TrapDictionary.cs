@@ -9,18 +9,33 @@ namespace Debugging.Traps
     {
         private readonly Dictionary<TKey, TValue> _inner = new Dictionary<TKey, TValue>();
         private readonly object _trapLock = new object();
-        private readonly List<DictTrapRule<TKey, TValue>> _rules = new List<DictTrapRule<TKey, TValue>>();
+        private readonly Dictionary<TrapEventType, DictTrapRule<TKey, TValue>[]> _ruleBuckets;
 
-        public TrapDictionary() { }
+        public TrapDictionary() 
+        {
+             _ruleBuckets = InitializeBuckets();
+        }
         
         public TrapDictionary(IDictionary<TKey, TValue> dictionary)
         {
              _inner = new Dictionary<TKey, TValue>(dictionary);
+             _ruleBuckets = InitializeBuckets();
         }
 
         public TrapDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection)
         {
              _inner = new Dictionary<TKey, TValue>(collection.ToDictionary(k => k.Key, v => v.Value));
+             _ruleBuckets = InitializeBuckets();
+        }
+
+        private Dictionary<TrapEventType, DictTrapRule<TKey, TValue>[]> InitializeBuckets()
+        {
+            var dict = new Dictionary<TrapEventType, DictTrapRule<TKey, TValue>[]>();
+            foreach (TrapEventType type in Enum.GetValues(typeof(TrapEventType)))
+            {
+                dict[type] = new DictTrapRule<TKey, TValue>[0];
+            }
+            return dict;
         }
 
         // --- Fluent API Entry Points ---
@@ -34,7 +49,11 @@ namespace Debugging.Traps
         {
             lock (_trapLock)
             {
-                _rules.Add(rule);
+                var existing = _ruleBuckets[rule.EventType];
+                var newArray = new DictTrapRule<TKey, TValue>[existing.Length + 1];
+                Array.Copy(existing, newArray, existing.Length);
+                newArray[existing.Length] = rule;
+                _ruleBuckets[rule.EventType] = newArray;
             }
         }
 
@@ -133,16 +152,14 @@ namespace Debugging.Traps
 
         private void ExecuteTraps(TrapEventType eventType, TKey key, TValue value, TValue? oldValue = default!)
         {
-            if (!TrapManager.Enabled || _rules.Count == 0) return;
+            if (!TrapManager.Enabled) return;
 
-            List<DictTrapRule<TKey, TValue>> activeRules;
-            lock (_trapLock)
-            {
-                activeRules = _rules.Where(r => r.EventType == eventType).ToList();
-            }
+            var rules = _ruleBuckets[eventType];
+            if (rules.Length == 0) return;
 
-            foreach (var rule in activeRules)
+            for (int i = 0; i < rules.Length; i++)
             {
+                var rule = rules[i];
                 try
                 {
                     // Dictionary Predicate receives Key and Value

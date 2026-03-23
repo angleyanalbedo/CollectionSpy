@@ -8,4 +8,5 @@
   <Folder Name="/TrapLibrary/">
     <Project Path="TrapLibrary/Debugging.Traps.csproj" />
   </Folder>
+  <Project Path="TrapLibrary.Benchmarks/TrapLibrary.Benchmarks.csproj" />
 </Solution>
