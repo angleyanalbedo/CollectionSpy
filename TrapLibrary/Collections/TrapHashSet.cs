@@ -16,6 +16,11 @@ namespace Debugging.Traps
             _inner = new HashSet<T>();
         }
 
+        public TrapHashSet(IEnumerable<T> collection)
+        {
+            _inner = new HashSet<T>(collection);
+        }
+
         public TrapHashSet(IEqualityComparer<T> comparer)
         {
             _inner = new HashSet<T>(comparer);
@@ -31,6 +36,21 @@ namespace Debugging.Traps
             lock (_trapLock)
             {
                 _rules.Add(rule);
+            }
+        }
+
+        // --- Direct Access Methods (Bypass Traps) ---
+
+        public bool AddWithoutTrap(T item)
+        {
+            return _inner.Add(item);
+        }
+
+        public void AddRange(IEnumerable<T> collection)
+        {
+            foreach (var item in collection)
+            {
+                _inner.Add(item);
             }
         }
 

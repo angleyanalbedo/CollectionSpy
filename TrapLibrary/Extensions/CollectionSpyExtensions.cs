@@ -11,12 +11,7 @@ namespace Debugging.Traps.Extensions
         /// </summary>
         public static TrapList<T> ToTrapList<T>(this IEnumerable<T> source)
         {
-            var list = new TrapList<T>();
-            foreach (var item in source)
-            {
-                list.Add(item);
-            }
-            return list;
+            return new TrapList<T>(source);
         }
 
         /// <summary>
@@ -24,12 +19,7 @@ namespace Debugging.Traps.Extensions
         /// </summary>
         public static TrapHashSet<T> ToTrapHashSet<T>(this IEnumerable<T> source)
         {
-            var set = new TrapHashSet<T>();
-            foreach (var item in source)
-            {
-                set.Add(item);
-            }
-            return set;
+            return new TrapHashSet<T>(source);
         }
 
         /// <summary>
@@ -38,12 +28,7 @@ namespace Debugging.Traps.Extensions
         public static TrapDictionary<TKey, TValue> ToTrapDictionary<TKey, TValue>(this IDictionary<TKey, TValue> source)
             where TKey : notnull
         {
-            var dict = new TrapDictionary<TKey, TValue>();
-            foreach (var kvp in source)
-            {
-                dict.Add(kvp.Key, kvp.Value);
-            }
-            return dict;
+            return new TrapDictionary<TKey, TValue>(source);
         }
 
         /// <summary>

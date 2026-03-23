@@ -11,6 +11,10 @@ namespace Debugging.Traps
         private readonly object _trapLock = new object();
         private readonly List<ListTrapRule<T>> _rules = new List<ListTrapRule<T>>();
 
+        public TrapList() { }
+        
+        public TrapList(IEnumerable<T> collection) : base(collection.ToList()) { }
+
         // --- Fluent API Entry Points ---
 
         public ListTrapBuilder<T> OnAdd() => new ListTrapBuilder<T>(this, TrapEventType.Added);
@@ -23,6 +27,21 @@ namespace Debugging.Traps
             lock (_trapLock)
             {
                 _rules.Add(rule);
+            }
+        }
+
+        // --- Direct Access Methods (Bypass Traps) ---
+
+        public void AddWithoutTrap(T item)
+        {
+            Items.Add(item);
+        }
+
+        public void AddRange(IEnumerable<T> collection)
+        {
+            foreach (var item in collection)
+            {
+                Items.Add(item);
             }
         }
 

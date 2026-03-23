@@ -11,6 +11,18 @@ namespace Debugging.Traps
         private readonly object _trapLock = new object();
         private readonly List<DictTrapRule<TKey, TValue>> _rules = new List<DictTrapRule<TKey, TValue>>();
 
+        public TrapDictionary() { }
+        
+        public TrapDictionary(IDictionary<TKey, TValue> dictionary)
+        {
+             _inner = new Dictionary<TKey, TValue>(dictionary);
+        }
+
+        public TrapDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection)
+        {
+             _inner = new Dictionary<TKey, TValue>(collection.ToDictionary(k => k.Key, v => v.Value));
+        }
+
         // --- Fluent API Entry Points ---
 
         public DictTrapBuilder<TKey, TValue> OnAdd() => new DictTrapBuilder<TKey, TValue>(this, TrapEventType.Added);
@@ -23,6 +35,21 @@ namespace Debugging.Traps
             lock (_trapLock)
             {
                 _rules.Add(rule);
+            }
+        }
+
+        // --- Direct Access Methods (Bypass Traps) ---
+
+        public void AddWithoutTrap(TKey key, TValue value)
+        {
+            _inner.Add(key, value);
+        }
+
+        public void AddRange(IEnumerable<KeyValuePair<TKey, TValue>> collection)
+        {
+            foreach (var kvp in collection)
+            {
+                _inner.Add(kvp.Key, kvp.Value);
             }
         }
 
