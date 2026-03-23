@@ -6,6 +6,7 @@ using System.Collections.Generic;
 namespace TrapLibrary.Benchmarks
 {
     [MemoryDiagnoser]
+    [ShortRunJob]
     public class ListBenchmark
     {
         private List<int> _nativeList;
