@@ -9,6 +9,7 @@ on:
 jobs:
   publish:
     runs-on: windows-latest
+    environment: Production
     permissions:
       id-token: write # Required for NuGet.org Trusted Publishing
       contents: read  # Required for actions/checkout
