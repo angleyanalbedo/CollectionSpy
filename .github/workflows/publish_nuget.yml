@@ -55,9 +55,21 @@ jobs:
     - name: Verify Package Creation
       run: ls ./nupkgs
       
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+      
+    - name: NuGet Login
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        # NuGet.org username
+        user: Ranni
+        # NuGet.org API Key is automatically generated via OIDC token exchange
+        # No secrets required here!
+
     - name: Publish to NuGet (Trusted Publishing)
-      # Use dotnet nuget push which supports OIDC/Trusted Publishing out of the box with .NET 6+
+      # Use the temporary API key from the login step
       run: |
         foreach($file in (Get-ChildItem "./nupkgs/*.nupkg")) {
-            dotnet nuget push $file.FullName --source https://api.nuget.org/v3/index.json --api-key "TrustedPublishing" --skip-duplicate
+            dotnet nuget push $file.FullName --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --skip-duplicate
         }
