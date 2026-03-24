@@ -55,8 +55,8 @@ jobs:
       run: ls ./nupkgs
       
     - name: Publish to NuGet (Trusted Publishing)
-      # Use Get-ChildItem to resolve the file path explicitly
+      # Use dotnet nuget push which supports OIDC/Trusted Publishing out of the box with .NET 6+
       run: |
         foreach($file in (Get-ChildItem "./nupkgs/*.nupkg")) {
-            nuget push $file.FullName -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey "TrustedPublishing"
+            dotnet nuget push $file.FullName --source https://api.nuget.org/v3/index.json --api-key "TrustedPublishing" --skip-duplicate
         }
