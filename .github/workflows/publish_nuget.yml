@@ -1,0 +1,51 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags, e.g. v1.0.0
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    permissions:
+      id-token: write # Required for NuGet.org Trusted Publishing
+      contents: read  # Required for actions/checkout
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          6.0.x
+
+    - name: Setup NuGet.exe
+      uses: nuget/setup-nuget@v1
+      with:
+        nuget-version: 'latest'
+          
+    - name: Restore dependencies
+      run: dotnet restore TrapLibrary/Debugging.Traps.csproj
+      
+    - name: Build
+      run: dotnet build TrapLibrary/Debugging.Traps.csproj --configuration Release --no-restore
+      
+    - name: Pack
+      # Automatically sets the package version from the git tag if available (e.g., v1.0.0 -> 1.0.0)
+      run: |
+        $Version = "${{ github.ref_name }}".TrimStart('v')
+        if ("${{ github.ref_type }}" -eq "tag") {
+            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --no-build --output ./nupkgs /p:Version=$Version
+        } else {
+            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --no-build --output ./nupkgs
+        }
+      shell: pwsh
+      
+    - name: Publish to NuGet (Trusted Publishing)
+      # Trusted Publishing uses the OIDC token automatically. 
+      # We pass a dummy API key because the command expects one, but it is ignored in favor of the OIDC token.
+      run: nuget push "./nupkgs/*.nupkg" -Source https://api.nuget.org/v3/index.json -SkipDuplicate -ApiKey "TrustedPublishing"

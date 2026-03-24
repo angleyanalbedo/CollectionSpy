@@ -26,7 +26,7 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageProjectUrl>https://github.com/angleyanalbedo/CollectionSpy.git</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Copyright>../LICENSE</Copyright>
+    <Copyright>Copyright (c) 2026 angleyanalbedo</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
