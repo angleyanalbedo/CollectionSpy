@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace Debugging.Traps
 {
@@ -27,32 +29,49 @@ namespace Debugging.Traps
             ShowPerformanceHint();
         }
 
+        /// <summary>
+        /// Check if the entry assembly (the main application) is built in Debug mode.
+        /// </summary>
+        private static bool IsDebugBuild
+        {
+            get
+            {
+                var assembly = Assembly.GetEntryAssembly();
+                if (assembly == null) return false;
+
+                var debuggableAttribute = assembly.GetCustomAttribute<DebuggableAttribute>();
+                return debuggableAttribute != null && debuggableAttribute.IsJITTrackingEnabled;
+            }
+        }
+
         private static void ShowPerformanceHint()
         {
-#if !DEBUG
-            try
+            // Use runtime check instead of compile-time #if DEBUG
+            if (!IsDebugBuild)
             {
-                var originalColor = Console.ForegroundColor;
-                if (_enabled)
+                try
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance.");
+                    var originalColor = Console.ForegroundColor;
+                    if (_enabled)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance.");
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("[CollectionSpy] ℹ️ Traps are disabled for best performance.");
+                    }
+                    Console.ForegroundColor = originalColor;
                 }
-                else
+                catch
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("[CollectionSpy] ℹ️ Traps are disabled for best performance.");
+                    // Fallback for headless environments (e.g. no console attached)
+                    System.Diagnostics.Debug.WriteLine(_enabled 
+                        ? "[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance." 
+                        : "[CollectionSpy] ℹ️ Traps are disabled for best performance.");
                 }
-                Console.ForegroundColor = originalColor;
             }
-            catch
-            {
-                // Fallback for headless environments (e.g. no console attached)
-                System.Diagnostics.Debug.WriteLine(_enabled 
-                    ? "[CollectionSpy] ⚠️ WARNING: Traps are enabled in Release mode. Disable them for best performance." 
-                    : "[CollectionSpy] ℹ️ Traps are disabled for best performance.");
-            }
-#endif
         }
     }
 }
