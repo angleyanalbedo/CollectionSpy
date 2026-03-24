@@ -31,15 +31,23 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore TrapLibrary/Debugging.Traps.csproj
       
-    - name: Pack
-      # Automatically sets the package version from the git tag if available (e.g., v1.0.0 -> 1.0.0)
-      # We removed --no-build to ensure the Version property is applied correctly during a fresh build
+    - name: Build
       run: |
         $Version = "${{ github.ref_name }}".TrimStart('v')
         if ("${{ github.ref_type }}" -eq "tag") {
-            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --output ./nupkgs /p:Version=$Version
+            dotnet build TrapLibrary/Debugging.Traps.csproj --configuration Release /p:Version=$Version
         } else {
-            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --output ./nupkgs
+            dotnet build TrapLibrary/Debugging.Traps.csproj --configuration Release
+        }
+      shell: pwsh
+
+    - name: Pack
+      run: |
+        $Version = "${{ github.ref_name }}".TrimStart('v')
+        if ("${{ github.ref_type }}" -eq "tag") {
+            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --no-build --output ./nupkgs /p:Version=$Version
+        } else {
+            dotnet pack TrapLibrary/Debugging.Traps.csproj --configuration Release --no-build --output ./nupkgs
         }
       shell: pwsh
       
