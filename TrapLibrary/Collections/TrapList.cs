@@ -1,16 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 
 namespace Debugging.Traps
 {
-    public class TrapList<T> : Collection<T>
+    public class TrapList<T> : Collection<T>, INotifyCollectionChanged, INotifyPropertyChanged
     {
         // Thread lock to prevent conflicts when configuring or triggering Traps in multi-threaded environments
         private readonly object _trapLock = new object();
         // Optimized bucket storage: fast lookups, no allocations during execution
         private readonly Dictionary<TrapEventType, ListTrapRule<T>[]> _ruleBuckets;
+
+        public event NotifyCollectionChangedEventHandler? CollectionChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         private Dictionary<TrapEventType, ListTrapRule<T>[]> InitializeBuckets()
         {
@@ -58,13 +63,26 @@ namespace Debugging.Traps
         public void AddWithoutTrap(T item)
         {
             Items.Add(item);
+            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged("Item[]");
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, Items.Count - 1));
         }
 
         public void AddRange(IEnumerable<T> collection)
         {
+            var startingIndex = Items.Count;
+            var addedItems = new List<T>();
             foreach (var item in collection)
             {
                 Items.Add(item);
+                addedItems.Add(item);
+            }
+            
+            if (addedItems.Count > 0)
+            {
+                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged("Item[]");
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, addedItems, startingIndex));
             }
         }
 
@@ -74,6 +92,9 @@ namespace Debugging.Traps
         {
             ExecuteTraps(TrapEventType.Added, item);
             base.InsertItem(index, item);
+            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged("Item[]");
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
         }
 
         protected override void SetItem(int index, T item)
@@ -82,6 +103,8 @@ namespace Debugging.Traps
             T oldItem = this[index]; 
             ExecuteTraps(TrapEventType.Updated, item, oldItem);
             base.SetItem(index, item);
+            OnPropertyChanged("Item[]");
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, oldItem, index));
         }
 
         protected override void RemoveItem(int index)
@@ -89,12 +112,30 @@ namespace Debugging.Traps
             T removedItem = this[index];
             ExecuteTraps(TrapEventType.Removed, removedItem);
             base.RemoveItem(index);
+            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged("Item[]");
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, removedItem, index));
         }
 
         protected override void ClearItems()
         {
             ExecuteTraps(TrapEventType.Cleared, default!);
             base.ClearItems();
+            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged("Item[]");
+            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        }
+
+        // --- Event Invocation ---
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+        {
+            CollectionChanged?.Invoke(this, e);
         }
 
         // --- Execution Engine ---
