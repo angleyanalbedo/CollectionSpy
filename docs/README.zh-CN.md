@@ -44,6 +44,18 @@ Install-Package CollectionSpy
 
 ---
 
+## 🎮 可视化 Dashboard 演示 (WPF)
+
+想看看 CollectionSpy 的实际效果吗？我们编写了一个实时的 **WPF PLC 信号监控看板**，用于演示如何将 `TrapList` 结合 UI 数据绑定 (`INotifyCollectionChanged`) 一起使用。
+
+*(注：你可以稍后运行 WPF 程序，截取一张动图或截图放在这里)*
+
+1. 克隆仓库。
+2. 将 `TrapLibrary.WpfDemo` 设为启动项目。
+3. 运行程序，点击 **"🚨 Add Overheat Signal (Trap!)"** 按钮，观察右侧日志是如何瞬间被陷阱捕获并渲染的！
+
+---
+
 ## ⚡ 快速开始
 
 ### 1. 监控 List

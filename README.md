@@ -44,6 +44,18 @@ Install-Package CollectionSpy
 
 ---
 
+## 🎮 Live Dashboard Demo
+
+Want to see CollectionSpy in action? We've built a real-time **WPF PLC Signal Monitor Dashboard** to demonstrate how to use `TrapList` with UI data binding (`INotifyCollectionChanged`).
+
+*(Note: You can add a GIF or Screenshot here later by running the WPF app and capturing the screen)*
+
+1. Clone the repo.
+2. Set `TrapLibrary.WpfDemo` as the startup project.
+3. Run it and click the **"Add Overheat Signal (Trap!)"** button to see the logs trigger instantly!
+
+---
+
 ## ⚡ Quick Start
 
 ### 1. Spy on a List
