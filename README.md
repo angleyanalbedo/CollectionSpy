@@ -1,135 +1,174 @@
-# CollectionSpy 🕵️‍♂️
+<div align="center">
 
-**CollectionSpy** allows you to "trap" and debug hidden modifications in your C# lists and dictionaries. 
+# 🕵️‍♂️ CollectionSpy 
 
-It provides a specialized `TrapList<T>` and `TrapDictionary<TKey, TValue>` that act as drop-in replacements for standard collections, enabling you to inject **Breakpoints**, **Stack Traces**, or **Logs** when specific data conditions are met (e.g., "Who added a null ID to this list?").
+**The Zero-Friction Debugging Toolkit for C# Collections**
+
+[![NuGet](https://img.shields.io/nuget/v/CollectionSpy.svg?style=flat-square&color=blue)](https://www.nuget.org/packages/CollectionSpy/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/CollectionSpy.svg?style=flat-square&color=blue)](https://www.nuget.org/packages/CollectionSpy/)
+[![License](https://img.shields.io/github/license/angleyanalbedo/CollectionSpy?style=flat-square&color=green)](LICENSE)
+[![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+
+*Stop guessing **who** modified your data. Trap them red-handed.*
+
+[English](README.md) | [简体中文](docs/README.zh-CN.md)
+
+</div>
+
+---
 
 ## 🚀 Why CollectionSpy?
 
-Debugging legacy code or complex state management can be a nightmare when you don't know *who* modified a collection. 
-- **Standard `ObservableCollection`** is too verbose for debugging (requires event handlers).
-- **Conditional Breakpoints** in IDEs are slow and can't be shared with the team.
-- **AOP Frameworks** are overkill for simple debugging tasks.
+Debugging complex state management, legacy code, or high-frequency data streams (like PLC signals in industrial automation) can be a nightmare when a `List` or `Dictionary` is modified unexpectedly.
 
-**CollectionSpy** solves this with a fluent, declarative API.
+- ❌ **`ObservableCollection`** is too verbose for temporary debugging and pollutes your architecture.
+- ❌ **Conditional Breakpoints** in IDEs (like Visual Studio) are painfully slow and cannot be shared with your team.
+- ❌ **AOP Frameworks** (like PostSharp) are heavy, slow to compile, and overkill for simple debugging tasks.
+
+**CollectionSpy** solves this with a fluent, declarative API. It provides drop-in replacements (`TrapList`, `TrapDictionary`, etc.) that let you inject **Breakpoints**, **Stack Traces**, or **Custom Logs** exactly when specific data conditions are met.
+
+---
 
 ## 📦 Installation
+
+Grab the latest version from NuGet:
 
 ```bash
 dotnet add package CollectionSpy
 ```
 
+Or via the Package Manager Console:
+```powershell
+Install-Package CollectionSpy
+```
+
+---
+
 ## ⚡ Quick Start
 
 ### 1. Spy on a List
 
-You can create a `TrapList` directly, or convert an existing `IEnumerable` using fluent extensions:
+You can create a `TrapList` directly, or convert any existing `IEnumerable` using the elegant fluent extensions:
 
 ```csharp
 using Debugging.Traps;
-using Debugging.Traps.Extensions; // Import for .ToTrapList()
+using Debugging.Traps.Extensions; // Gives you .ToTrapList(), .ToTrapDictionary(), etc.
 
-var users = GetUsers().ToTrapList(); // Convert directly!
+// Instead of new List<User>(), just do this:
+var users = GetUsers().ToTrapList(); 
 
-// 1. Break execution when a user with null name is added
+// 🎯 Scenario 1: Break execution when a bad object is added
 users.OnAdd()
-     .When(u => u.Name == null)
-     .Do(TrapActions.Break());
+     .When(u => u.Name == null) // The condition
+     .Do(TrapActions.Break());  // The trap (Debugger.Break)
 
-// 2. Log a warning when a specific ID is removed
+// 🎯 Scenario 2: Log a warning when a specific critical ID is removed
 users.OnRemove()
      .When(u => u.Id == 999)
-     .Do(TrapActions.Log("WARNING: Admin user 999 was removed!"));
+     .Do(TrapActions.Log("🚨 WARNING: Admin user 999 was removed!"));
 ```
 
 ### 2. Spy on a Dictionary
 
+Perfect for monitoring configuration changes or caching layers.
+
 ```csharp
 var config = GetConfigs().ToTrapDictionary();
 
-// Alert if a secure setting is downgraded to HTTP
+// 🚨 Alert if a secure setting is downgraded to HTTP
 config.OnUpdate()
       .When((key, value) => key == "ApiUrl" && value.StartsWith("http:"))
-      .Do(TrapActions.Log("SECURITY ALERT: API URL set to insecure HTTP!"));
+      .Do(TrapActions.Log("SECURITY ALERT: API URL downgraded to insecure HTTP!"));
 ```
 
 ### 3. Spy on a HashSet
 
+Catch inefficient code logic or duplicate entries easily.
+
 ```csharp
 var uniqueTags = new TrapHashSet<string>();
 
-// Detect inefficient code: adding a tag that already exists
+// 🐌 Detect inefficient code: attempting to add a tag that is already present
 uniqueTags.OnAdd()
           .When(tag => uniqueTags.Contains(tag))
-          .Do(TrapActions.Log("Inefficient Code: Tag already exists!"));
+          .Do(TrapActions.Log("Inefficient Code: Tag already exists in the set!"));
 ```
 
-### 4. Spy on Queue and Stack
+### 4. Spy on Queues and Stacks
 
 ```csharp
-// Spy on a Queue (FIFO)
+// Spy on a Queue (FIFO) - Great for Task processing
 var jobQueue = new List<string> { "init_job" }.ToTrapQueue();
 
 jobQueue.OnEnqueue()
         .When(job => job == "POISON_PILL")
         .Do(TrapActions.Log("Critical: Poison pill enqueued!"));
 
-// Spy on a Stack (LIFO)
+// Spy on a Stack (LIFO) - Great for UI Navigation tracking
 var navStack = new TrapStack<string>();
 
 navStack.OnPop()
         .When(page => page == "Root")
-        .Do(TrapActions.DumpStackTrace("Root Page Popped By"));
+        .Do(TrapActions.DumpStackTrace("Root Page Popped By:"));
 ```
+
+---
 
 ## 🛡️ Performance & Production Safety
 
-**CollectionSpy** is designed for critical debugging in production environments with minimal overhead.
+**CollectionSpy** is engineered for critical debugging in production environments with virtually zero overhead when you need it to be fast.
 
 ### ⚡ Zero-Allocation Architecture (v1.0+)
 The library uses a highly optimized **Copy-On-Write** strategy for rule storage.
-- **Zero Allocations**: Executing traps (adding/removing items) incurs **0 bytes of memory allocation** on the hot path.
-- **Microsecond Overhead**: Even with active traps, the overhead is measured in single-digit microseconds (~4-6μs).
-- **Thread Safe**: Rule execution is lock-free and thread-safe.
+- **Zero Allocations**: Executing traps (adding/removing items) incurs **0 bytes of memory allocation** on the hot path. No closures or hidden objects are created during enumeration.
+- **Microsecond Overhead**: Even with active traps evaluating conditions, the overhead is measured in single-digit microseconds.
+- **Thread Safe Configuration**: Rule addition and removal are lock-free and thread-safe.
 
-### 📊 Benchmarks
+### 📊 Benchmark Snippet
 Comparison of `List<int>.Add()` operations (10,000 items):
 
-| Method | Mean Time | Ratio | Allocation |
+| Method | Mean Time | Ratio | Gen0 Allocations |
 | :--- | :--- | :--- | :--- |
-| **Native List** | ~7.9 μs | 1.0x | - |
-| **AddWithoutTrap** | ~9.7 μs | 1.2x | - |
-| **TrapList (Active)** | ~71.0 μs | 8.9x | - |
+| **Native `List<T>`** | ~7.9 μs | 1.0x | - |
+| **`AddWithoutTrap`** | ~9.7 μs | 1.2x | - |
+| **`TrapList` (Active)** | ~71.0 μs | 8.9x | - |
 
-> *Benchmarks run on AMD Ryzen 9 8945HX, .NET 8.0*
+> *Benchmarks run on AMD Ryzen 9 8945HX, .NET 8.0. Check [BENCHMARKS.md](BENCHMARKS.md) for full details.*
 
-### 🚀 Bypassing Traps
-Need to initialize a large collection without triggering traps? Use the **Bypass API**:
+### 🚀 Bypassing Traps (Bulk Inserts)
+Need to initialize a large collection without triggering traps and ruining performance? Use the **Bypass API**:
 
 ```csharp
 // Fast bulk insert, ZERO trap overhead
 myTrapList.AddWithoutTrap(newItem);
-myTrapList.AddRange(largeCollection);
+myTrapList.AddRange(largeCollection); // Native speed
 ```
 
-1.  **Release Mode**:
-    - By default, `TrapManager.Enabled` is **TRUE** in both Debug and Release builds.
-    - In **Release** builds, the library will emit a single **Console Warning** on startup (static constructor) to alert you that traps are active.
-    - Subsequent toggles of `TrapManager.Enabled` are silent.
+### 🎛️ The Global Kill Switch
+To disable all overhead in production, simply flip the master switch:
 
-2.  **Disabling**:
-    To disable all overhead in production, set:
-    ```csharp
-    TrapManager.Enabled = false;
-    ```
-    When disabled, the interception logic returns immediately (fast-fail), imposing negligible overhead.
+```csharp
+TrapManager.Enabled = false;
+```
+When disabled, the interception logic returns immediately (fast-fail), imposing negligible overhead. Note that in **Release** builds, the library will emit a single **Console Warning** on startup to alert you if traps are left active.
 
-3.  **Thread Safety**: 
-    Trap configuration is thread-safe. Execution logic uses immutable snapshots to prevent concurrency issues during enumeration.
+---
+
+## 🗺️ Roadmap & Next Steps
+
+We are actively evolving CollectionSpy from a "handy tool" to an "industrial-grade framework". Check out our [Roadmap](docs/ROADMAP.md) for upcoming features, including:
+- 🚀 `INotifyCollectionChanged` support for WPF/WinForms data binding.
+- 🏭 Thread-safe `ConcurrentDictionary` and `ConcurrentQueue` support.
+- ⚡ **Source Generators** for true zero-overhead, AOT-friendly compilation.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! 
+Feel free to check [issues page](https://github.com/angleyanalbedo/CollectionSpy/issues).
 
 ## 📝 License
 
-MIT License. See [LICENSE](LICENSE) for details.
+This project is [MIT](LICENSE) licensed.
 
 ---
-*Maintained by [angleyanalbedo](https://github.com/angleyanalbedo)*
+*Crafted with ❤️ by [angleyanalbedo](https://github.com/angleyanalbedo)*
