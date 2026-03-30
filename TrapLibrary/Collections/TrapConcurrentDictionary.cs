@@ -1,31 +1,37 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Debugging.Traps
 {
-    public class TrapDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ITrapDictionaryTarget<TKey, TValue> where TKey : notnull
+    /// <summary>
+    /// A thread-safe dictionary that supports trap interception.
+    /// Wraps a ConcurrentDictionary<TKey, TValue> to provide lock-free reads and thread-safe writes.
+    /// </summary>
+    public class TrapConcurrentDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>, ITrapDictionaryTarget<TKey, TValue> where TKey : notnull
     {
-        private readonly Dictionary<TKey, TValue> _inner = new Dictionary<TKey, TValue>();
+        private readonly ConcurrentDictionary<TKey, TValue> _inner;
         private readonly object _trapLock = new object();
         private readonly Dictionary<TrapEventType, DictTrapRule<TKey, TValue>[]> _ruleBuckets;
 
-        public TrapDictionary() 
+        public TrapConcurrentDictionary() 
         {
-             _ruleBuckets = InitializeBuckets();
-        }
-        
-        public TrapDictionary(IDictionary<TKey, TValue> dictionary)
-        {
-             _inner = new Dictionary<TKey, TValue>(dictionary);
-             _ruleBuckets = InitializeBuckets();
+            _inner = new ConcurrentDictionary<TKey, TValue>();
+            _ruleBuckets = InitializeBuckets();
         }
 
-        public TrapDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection)
+        public TrapConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection)
         {
-             _inner = new Dictionary<TKey, TValue>(collection.ToDictionary(k => k.Key, v => v.Value));
-             _ruleBuckets = InitializeBuckets();
+            _inner = new ConcurrentDictionary<TKey, TValue>(collection);
+            _ruleBuckets = InitializeBuckets();
+        }
+        
+        public TrapConcurrentDictionary(IEqualityComparer<TKey> comparer)
+        {
+            _inner = new ConcurrentDictionary<TKey, TValue>(comparer);
+            _ruleBuckets = InitializeBuckets();
         }
 
         private Dictionary<TrapEventType, DictTrapRule<TKey, TValue>[]> InitializeBuckets()
@@ -37,6 +43,8 @@ namespace Debugging.Traps
             }
             return dict;
         }
+
+        // --- Fluent API Entry Points ---
 
         public DictTrapBuilder<TKey, TValue> OnAdd() => new DictTrapBuilder<TKey, TValue>(this, TrapEventType.Added);
         public DictTrapBuilder<TKey, TValue> OnRemove() => new DictTrapBuilder<TKey, TValue>(this, TrapEventType.Removed);
@@ -55,48 +63,79 @@ namespace Debugging.Traps
             }
         }
 
-        public void AddWithoutTrap(TKey key, TValue value)
+        // --- Direct Access Methods (Bypass Traps) ---
+
+        public bool TryAddWithoutTrap(TKey key, TValue value)
         {
-            _inner.Add(key, value);
+            return _inner.TryAdd(key, value);
         }
 
-        public void AddRange(IEnumerable<KeyValuePair<TKey, TValue>> collection)
-        {
-            foreach (var kvp in collection)
-            {
-                _inner.Add(kvp.Key, kvp.Value);
-            }
-        }
+        // --- Core Interception Logic ---
 
         public TValue this[TKey key]
         {
             get => _inner[key];
             set
             {
-                if (_inner.ContainsKey(key))
-                {
-                    ExecuteTraps(TrapEventType.Updated, key, value, _inner[key]);
-                }
-                else
-                {
-                    ExecuteTraps(TrapEventType.Added, key, value);
-                }
-                _inner[key] = value;
+                // In a concurrent environment, this is tricky. 
+                // We use AddOrUpdate to ensure atomicity, and trigger traps inside the delegates.
+                _inner.AddOrUpdate(
+                    key,
+                    addValueFactory: (k) => 
+                    {
+                        ExecuteTraps(TrapEventType.Added, k, value);
+                        return value;
+                    },
+                    updateValueFactory: (k, existingVal) => 
+                    {
+                        ExecuteTraps(TrapEventType.Updated, k, value, existingVal);
+                        return value;
+                    });
             }
         }
 
         public void Add(TKey key, TValue value)
         {
-            ExecuteTraps(TrapEventType.Added, key, value);
-            _inner.Add(key, value);
+            if (TryAdd(key, value) == false)
+            {
+                throw new ArgumentException("An item with the same key has already been added.");
+            }
+        }
+
+        public bool TryAdd(TKey key, TValue value)
+        {
+            // First we try to add. If successful, we trigger the trap.
+            // Note: In highly concurrent scenarios, triggering the trap *after* the add 
+            // is safer than before, because another thread might beat us to the add.
+            if (_inner.TryAdd(key, value))
+            {
+                ExecuteTraps(TrapEventType.Added, key, value);
+                return true;
+            }
+            return false;
         }
 
         public bool Remove(TKey key)
         {
-            if (_inner.TryGetValue(key, out var value))
+            return TryRemove(key, out _);
+        }
+
+        public bool TryRemove(TKey key, out TValue value)
+        {
+            if (_inner.TryRemove(key, out value))
             {
                 ExecuteTraps(TrapEventType.Removed, key, value);
-                return _inner.Remove(key);
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryUpdate(TKey key, TValue newValue, TValue comparisonValue)
+        {
+            if (_inner.TryUpdate(key, newValue, comparisonValue))
+            {
+                ExecuteTraps(TrapEventType.Updated, key, newValue, comparisonValue);
+                return true;
             }
             return false;
         }
@@ -107,6 +146,8 @@ namespace Debugging.Traps
             _inner.Clear();
         }
 
+        // --- IDictionary / ICollection implementations ---
+
         void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item)
         {
             Add(item.Key, item.Value);
@@ -114,16 +155,17 @@ namespace Debugging.Traps
 
         bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> item)
         {
-             if (_inner.TryGetValue(item.Key, out var val) && EqualityComparer<TValue>.Default.Equals(val, item.Value))
-             {
-                 ExecuteTraps(TrapEventType.Removed, item.Key, item.Value!);
-                 return _inner.Remove(item.Key);
-             }
-             return false;
+            if (_inner.TryGetValue(item.Key, out var val) && EqualityComparer<TValue>.Default.Equals(val, item.Value))
+            {
+                return TryRemove(item.Key, out _);
+            }
+            return false;
         }
 
         public ICollection<TKey> Keys => _inner.Keys;
         public ICollection<TValue> Values => _inner.Values;
+        IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => _inner.Keys;
+        IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => _inner.Values;
         public int Count => _inner.Count;
         public bool IsReadOnly => false;
         public bool ContainsKey(TKey key) => _inner.ContainsKey(key);
@@ -138,6 +180,8 @@ namespace Debugging.Traps
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => _inner.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => _inner.GetEnumerator();
 
+
+        // --- Execution Engine ---
 
         private void ExecuteTraps(TrapEventType eventType, TKey key, TValue value, TValue? oldValue = default!)
         {
@@ -161,55 +205,6 @@ namespace Debugging.Traps
                     try { Console.Error.WriteLine($"[CollectionSpy Error] Trap failed: {ex}"); } catch {}
                 }
             }
-        }
-    }
-
-    public class DictTrapRule<TKey, TValue> where TKey : notnull
-    {
-        public TrapEventType EventType { get; set; }
-        public Func<TKey, TValue, bool>? Predicate { get; set; }
-        public Action? Action { get; set; }
-    }
-
-    public class DictTrapBuilder<TKey, TValue> where TKey : notnull
-    {
-        private readonly ITrapDictionaryTarget<TKey, TValue> _dict;
-        private readonly TrapEventType _type;
-        private Func<TKey, TValue, bool>? _predicate;
-
-        internal DictTrapBuilder(ITrapDictionaryTarget<TKey, TValue> dict, TrapEventType type)
-        {
-            _dict = dict;
-            _type = type;
-        }
-
-        public DictTrapBuilder<TKey, TValue> WhenValue(Func<TValue, bool> valuePredicate)
-        {
-            _predicate = (k, v) => valuePredicate(v);
-            return this;
-        }
-
-        public DictTrapBuilder<TKey, TValue> WhenKey(Func<TKey, bool> keyPredicate)
-        {
-            _predicate = (k, v) => keyPredicate(k);
-            return this;
-        }
-
-        public DictTrapBuilder<TKey, TValue> When(Func<TKey, TValue, bool> predicate)
-        {
-            _predicate = predicate;
-            return this;
-        }
-
-        public void Do(Action action)
-        {
-            var rule = new DictTrapRule<TKey, TValue>
-            {
-                EventType = _type,
-                Predicate = _predicate,
-                Action = action
-            };
-            _dict.AddRule(rule);
         }
     }
 }

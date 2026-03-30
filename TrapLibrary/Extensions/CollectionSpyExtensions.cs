@@ -32,6 +32,15 @@ namespace Debugging.Traps.Extensions
         }
 
         /// <summary>
+        /// Converts an IEnumerable of KeyValuePairs to a TrapConcurrentDictionary.
+        /// </summary>
+        public static TrapConcurrentDictionary<TKey, TValue> ToTrapConcurrentDictionary<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>> source)
+            where TKey : notnull
+        {
+            return new TrapConcurrentDictionary<TKey, TValue>(source);
+        }
+
+        /// <summary>
         /// Converts an IEnumerable to a TrapQueue.
         /// </summary>
         public static TrapQueue<T> ToTrapQueue<T>(this IEnumerable<T> source)
