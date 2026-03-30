@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/TrapLibrary.WpfDemo/">
+    <Project Path="TrapLibrary.WpfDemo/Debugging.Traps.WpfDemo.csproj" />
+  </Folder>
+  <Folder Name="/TrapLibrary/" />
   <Project Path="TrapLibrary.Benchmarks/TrapLibrary.Benchmarks.csproj" />
   <Project Path="TrapLibrary.Demo/Debugging.Traps.Demo.csproj" />
   <Project Path="TrapLibrary.Tests/Debugging.Traps.Tests.csproj" />
