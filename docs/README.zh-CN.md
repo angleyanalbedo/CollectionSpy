@@ -169,8 +169,8 @@ TrapManager.Enabled = false;
 ## 🗺️ 路线图与下一步计划
 
 我们正在积极将 CollectionSpy 从一个“好用的工具”进化为“工业级框架”。查看我们的 [Roadmap](ROADMAP.md) 了解即将推出的功能：
-- 🚀 支持 `INotifyCollectionChanged`，完美兼容 WPF/WinForms 数据绑定。
-- 🏭 支持线程安全的 `ConcurrentDictionary` 和 `ConcurrentQueue`。
+- ✅ **支持 `INotifyCollectionChanged`**，完美兼容 WPF/WinForms 数据绑定 (已完成！)。
+- ✅ **支持线程安全的 `ConcurrentDictionary`**，满足高并发后台处理需求 (已完成！)。
 - ⚡ 引入 **Source Generators (源生成器)**，实现真正的零运行时开销，对 AOT 更加友好。
 
 ## 🤝 参与贡献

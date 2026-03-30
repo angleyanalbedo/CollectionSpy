@@ -169,8 +169,8 @@ When disabled, the interception logic returns immediately (fast-fail), imposing 
 ## 🗺️ Roadmap & Next Steps
 
 We are actively evolving CollectionSpy from a "handy tool" to an "industrial-grade framework". Check out our [Roadmap](docs/ROADMAP.md) for upcoming features, including:
-- 🚀 `INotifyCollectionChanged` support for WPF/WinForms data binding.
-- 🏭 Thread-safe `ConcurrentDictionary` and `ConcurrentQueue` support.
+- ✅ **`INotifyCollectionChanged` support** for WPF/WinForms data binding (Completed!).
+- ✅ **Thread-safe `ConcurrentDictionary` support** for high-performance backend processing (Completed!).
 - ⚡ **Source Generators** for true zero-overhead, AOT-friendly compilation.
 
 ## 🤝 Contributing
